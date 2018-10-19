@@ -2,6 +2,7 @@ from configs import *
 from Queue import Queue
 from rbt_gen_worker import RbtGenWorker
 import random, string, os, json
+import pandas as pd
 
 class RbtGenMaster():
 
@@ -11,7 +12,7 @@ class RbtGenMaster():
         self.WORKERS        = []
         self.queue          = Queue()
         self.log            = LogConfigs.logging.getLogger(__name__)
-        self.foldername    = foldername_generator()
+        self.foldername     = foldername_generator()
         self.save_path      = None
         while True:
             self.save_path = os.path.join( FileConfigs.RbTableConfigs.rbtable,self.foldername )
@@ -50,12 +51,8 @@ class RbtGenMaster():
         self.queue.join()
 
     def saveRbts(self):
-        for w in self.WORKERS:
-            self.log.info(  "%s hashed %d words." % (w.getName(),len(w.getRainbowtable().keys())) )
-            if self.log.level == LogConfigs.logging.INFO:
-                print(  "[i] %s hashed %d words." % (w.getName(),len(w.getRainbowtable().keys())) )
-            with open(os.path.join(self.save_path,w.getName()+"_rbtable."+FileConfigs.RbTableConfigs.ext),'w') as saveout:
-                json.dump(w.getRainbowtable(),saveout)
+        full_path = os.path.join(self.save_path,"rbtable."+FileConfigs.RbTableConfigs.ext)
+        self.getRbts().to_json(full_path)
 
     def getSavePath(self):
         return self.save_path
@@ -64,21 +61,12 @@ class RbtGenMaster():
         return self.foldername
     
     def getRbts(self):
-        return [ w.getRainbowtable() for w in self.WORKERS ]
+        combined_table = pd.concat([ w.getRainbowtable() for w in self.WORKERS ])
+        combined_table = combined_table[~combined_table.index.duplicated(keep='first')]
+        return combined_table
 
     def showStatistics(self):
-        self.numhashes = 0
-        for w in self.WORKERS:
-            self.numhashes += len(w.getRainbowtable().keys())
-        msg = "[i] Number of hashes computed: %d" % self.numhashes
-        print( msg )
-        self.log.info( msg )
-        msg = "[i] Total number of words: %d"  % self.numwords
-        print( msg )
-        self.log.info( msg )
-        try:
-            msg = "[i] Success rate: %f%%" % ( (100.0 * self.numwords) / float(self.numhashes) )
-        except ZeroDivisionError as zde:
-            msg = "[i] Success rate: 0.00%"
+        table_columns = len(self.getRbts().index)
+        msg = "[i] Number of hashes in the rb table: %d" % table_columns
         print( msg )
         self.log.info( msg )

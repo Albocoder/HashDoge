@@ -4,6 +4,7 @@ from pwc_worker import PwcWorker
 from os import listdir
 from os.path import isfile, join, abspath
 import random, string, os, json
+import pandas as pd
 
 class PwcMaster():
 
@@ -16,9 +17,9 @@ class PwcMaster():
         self.save_path  = None
         self.foldername = foldername
 
-        if(rbts == None and foldername == None):
+        if(rbts is None and foldername is None):
             raise Exception("Please declare the rainbow tables you want to use!")
-        if(rbts == None):
+        if(rbts is None):
             self.foldername = foldername
             self.log.info("Reading the rainbow tables!")
             rbpath = os.path.join(FileConfigs.RbTableConfigs.rbtable,foldername)
@@ -29,7 +30,8 @@ class PwcMaster():
             for f in listdir(rbpath):
                 if ( isfile(join(rbpath, f)) and f[f.rindex(".")+1:] == FileConfigs.RbTableConfigs.ext ):
                     with open(join(rbpath, f),'r') as rbtfile:
-                        self.rbts.append(json.load(rbtfile))
+                        self.rbts.append( pd.read_json(rbtfile) )
+            self.rbts = pd.concat(self.rbts)
         else:
             self.rbts = rbts
             if (self.foldername == None):
@@ -73,12 +75,16 @@ class PwcMaster():
         self.queue.join()
 
     def savePws(self):
+        to_concat = []
         for w in self.WORKERS:
-            print(  "%s cracked %d hashes." % (w.getName(),len(w.getCrackedPws().keys())) )
+            to_append = w.getCrackedPws()
+            to_concat.append(to_append)
+            print(  "%s cracked %d hashes." % (w.getName(),len(to_append)) )
             if self.log.level == LogConfigs.logging.INFO:
-                print(  "[i] %s cracked %d hashes." % (w.getName(),len(w.getCrackedPws().keys())) )
-            with open(os.path.join(self.save_path, w.getName()+"_pwcracks."+FileConfigs.CrackedPwsConfigs.ext),'w') as saveout:
-                json.dump(w.getCrackedPws(),saveout)
+                print(  "[i] %s cracked %d hashes." % (w.getName(),len(to_append)) )
+        
+        to_concat = pd.concat(to_concat)
+        to_concat.to_json(os.path.join(self.save_path, w.getName()+"pwcracks."+FileConfigs.CrackedPwsConfigs.ext))
 
     def getSavePath(self):
         return self.save_path
@@ -92,7 +98,7 @@ class PwcMaster():
     def showStatistics(self):
         self.numcracked = 0
         for w in self.WORKERS:
-            self.numcracked += len(w.getCrackedPws().keys())
+            self.numcracked += len(w.getCrackedPws())
         msg = "[i] Number of hashes cracked: %d" % self.numcracked
         print( msg )
         self.log.info( msg )

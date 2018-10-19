@@ -4,5 +4,7 @@
     "run_on_gpu"    : "False",
     "num_threads"   : "8",
     "saltsize"      : "0",
-    "saltspace"     : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    "saltspace"     : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+    "numiter"       : "20",
+    "pw_space"      : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 }
